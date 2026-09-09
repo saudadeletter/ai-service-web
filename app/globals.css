@@ -1,5 +1,83 @@
 @import "tailwindcss";
 
+.plain-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.plain-fieldset:disabled {
+  opacity: 0.7;
+}
+.login-shell {
+  max-width: 480px;
+  margin: 25px auto;
+}
+.preserve-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.admin-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px auto;
+  gap: 18px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+.admin-filters .field {
+  margin-bottom: 0;
+}
+.admin-empty {
+  padding: 45px 15px;
+  text-align: center;
+  color: var(--muted);
+}
+.pagination {
+  display: flex;
+  gap: 15px;
+  justify-content: space-between;
+  margin-top: 24px;
+  font-size: 14px;
+}
+.pagination > div {
+  display: flex;
+  gap: 22px;
+}
+.pagination a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.request-meta {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+.request-meta > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 14px;
+  font-size: 15px;
+}
+.request-meta dt {
+  color: var(--muted);
+}
+.request-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .admin-filters {
+    grid-template-columns: 1fr;
+  }
+  .footer-links {
+    flex-wrap: wrap;
+  }
+  .request-meta > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
 :root {
   --ink: #202724;
   --muted: #69716b;

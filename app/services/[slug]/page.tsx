@@ -74,14 +74,14 @@ export default async function ServiceDetail({ params }: Props) {
           </div>
           <div className="metadata-row">
             <span>当前状态</span>
-            <span>页面演示</span>
+            <span>接受需求咨询</span>
           </div>
           <Button asChild variant="dark">
             <Link href={isCustom ? "/custom" : "/custom?service=subscription"}>
               整理我的需求 <ArrowUpRight size={18} />
             </Link>
           </Button>
-          <small>当前可生成需求单，尚未开通付款与真实下单。</small>
+          <small>提交后可凭查询码跟进进度，尚未开通在线付款。</small>
         </aside>
       </div>
     </div>

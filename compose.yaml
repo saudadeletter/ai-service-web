@@ -1,10 +1,44 @@
 services:
+  db:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ai_service
+      POSTGRES_DB: ai_service
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run npm run setup first}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_service -d ai_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      DATABASE_URL: postgresql://ai_service:${POSTGRES_PASSWORD}@db:5432/ai_service
+    depends_on:
+      db:
+        condition: service_healthy
   web:
     build:
       context: .
       args:
         NEXT_PUBLIC_ICP_NUMBER: ${NEXT_PUBLIC_ICP_NUMBER:-}
     restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://ai_service:${POSTGRES_PASSWORD}@db:5432/ai_service
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-5}
+      APP_URL: ${APP_URL:?Run npm run setup first}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?Run npm run setup first}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Run npm run setup first}
+      RATE_LIMIT_SECRET: ${RATE_LIMIT_SECRET:?Run npm run setup first}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:3000:3000"
     logging:
@@ -12,3 +46,5 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+volumes:
+  postgres_data:

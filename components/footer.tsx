@@ -16,7 +16,8 @@ export function Footer() {
           <div className="footer-links">
             <Link href="/help">服务说明</Link>
             <Link href="/custom">提交需求</Link>
-            <Link href="/orders">订单查询</Link>
+            <Link href="/orders">进度查询</Link>
+            <Link href="/admin">管理入口</Link>
           </div>
         </div>
         <div className="container footer-bottom">
@@ -33,7 +34,7 @@ export function Footer() {
               {icp}
             </a>
           )}
-          <span>页面演示 · 暂不接收付款</span>
+          <span>接受需求咨询 · 暂不接收付款</span>
         </div>
       </footer>
       <div className="mobile-actions">

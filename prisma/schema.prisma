@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RequestStatus {
+  NEW
+  CONTACTED
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+}
+
+model ServiceRequest {
+  id           String        @id @default(cuid())
+  number       String        @unique
+  lookupHash   String        @unique
+  payloadHash  String
+  service      String
+  scene        String
+  description  String
+  timeline     String
+  budget       String
+  contactType  String
+  contact      String
+  status       RequestStatus @default(NEW)
+  publicNote   String        @default("")
+  internalNote String        @default("")
+  revision     Int           @default(0)
+  consentAt    DateTime      @default(now())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  events       RequestEvent[]
+
+  @@index([status, createdAt])
+  @@index([updatedAt])
+}
+
+model RequestEvent {
+  id        String         @id @default(cuid())
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  status    RequestStatus
+  actor     String
+  createdAt DateTime       @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+model AdminSession {
+  tokenHash         String   @id
+  credentialVersion String
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model RateBucket {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

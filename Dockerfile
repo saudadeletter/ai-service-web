@@ -1,7 +1,12 @@
 FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 RUN npm ci --no-audit --no-fund
+
+FROM deps AS migrator
+CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
 FROM node:24-bookworm-slim AS builder
 WORKDIR /app

@@ -5,4 +5,6 @@ out/
 !.env.example
 *.tsbuildinfo
 *.log
+generated/
+.env.tmp
 .DS_Store

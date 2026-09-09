@@ -21,7 +21,7 @@ export default function CustomPage() {
       <div className="form-layout">
         <div>
           <div className="notice">
-            当前为页面演示。填写内容仅在当前页面处理，不会发送给商家或创建真实订单。生成后请复制或下载需求单。
+            提交后，管理员可以看到你的需求和联系方式。你会获得专属查询凭证；提交咨询不会产生费用，也不代表已成交。
           </div>
           <Suspense fallback={<p>正在准备需求表单…</p>}>
             <RequestForm />
