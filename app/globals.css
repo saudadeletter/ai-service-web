@@ -87,6 +87,7 @@
   --green-dark: #385b28;
   --soft: #f1f4ec;
   --orange: #bc5939;
+  --header-height: 89px;
 }
 * {
   box-sizing: border-box;
@@ -97,12 +98,24 @@ html {
 }
 body {
   margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   background: var(--paper);
   color: var(--ink);
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: 16px;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
+}
+body > main {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+.site-header,
+.footer {
+  flex-shrink: 0;
 }
 a {
   color: inherit;
@@ -190,7 +203,7 @@ textarea:focus {
   z-index: 30;
 }
 .header-inner {
-  height: 88px;
+  height: calc(var(--header-height) - 1px);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1436,6 +1449,8 @@ th {
 }
 .catalog-grid .panel {
   height: 100%;
+  margin: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: start;
@@ -1443,10 +1458,23 @@ th {
 .catalog-grid .panel > p.preserve-text {
   flex: 1;
 }
-.catalog-price {
-  font-size: 32px;
-  font-weight: 650;
-  margin: 16px 0;
+.catalog-grid .catalog-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  max-width: 100%;
+  font-size: clamp(36px, 3.4vw, 52px);
+  line-height: 1.2;
+  font-weight: 750;
+  color: var(--green-dark);
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 24px;
+}
+.catalog-price-amount {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: inherit;
 }
 .catalog-price small {
   font-size: 14px;
@@ -1475,6 +1503,33 @@ th {
 .order-filters .checkbox-field {
   margin: 0;
   padding: 8px 0;
+}
+/* Keep normal document scrolling; let expanded content grow beyond one screen. */
+@media (min-width: 1051px) {
+  .home-screen {
+    min-height: calc(100vh - var(--header-height));
+    min-height: calc(100dvh - var(--header-height));
+  }
+  .home-page > .home-screen:not(.faq-section) {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .home-hero-screen .hero {
+    flex: 1;
+  }
+  .home-hero-screen .intro-strip {
+    flex-shrink: 0;
+  }
+  .home-hero-screen .hero,
+  .home-page > .section.home-screen,
+  .home-page > .scenarios-section > .section {
+    padding-top: clamp(32px, 5dvh, 76px);
+    padding-bottom: clamp(32px, 5dvh, 76px);
+  }
+  .home-page > .faq-section {
+    align-content: center;
+  }
 }
 @media (max-width: 760px) {
   .order-filters {

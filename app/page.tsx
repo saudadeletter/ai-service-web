@@ -6,93 +6,95 @@ import { faqs, scenarios, services } from "@/lib/content";
 
 export default function Home() {
   return (
-    <>
-      <section className="hero container">
-        <div className="hero-copy">
-          <div className="eyebrow">
-            <Sparkles size={16} /> 为校园里的每一个「不会」准备
-          </div>
-          <h1>
-            把 AI 用起来，
-            <br />
-            <span>把时间省下来。</span>
-          </h1>
-          <p className="hero-description">
-            想用 ChatGPT，不知道从哪开始？
-            <br />
-            从订阅协助到专属助手，找到适合你的 AI 用法。
-          </p>
-          <div className="hero-actions">
-            <Button asChild>
-              <Link href="#services">
-                看看能帮我什么 <ArrowUpRight size={18} />
-              </Link>
-            </Button>
-            <Button variant="outline" asChild>
-              <Link href="/custom">我想定制助手</Link>
-            </Button>
-          </div>
-          <div className="hero-points">
-            <span>
-              <Check size={16} /> 先讲清需求
-            </span>
-            <span>
-              <Check size={16} /> 再确认报价
-            </span>
-            <span>
-              <Check size={16} /> 约定交付内容
-            </span>
-          </div>
-        </div>
-        <div className="hero-board">
-          <div className="board-heading">
-            <span className="tiny-label">今天，给自己减点负</span>
-            <span className="board-index">01 / 04</span>
-          </div>
-          <div className="board-title">
-            <ServiceIcon name="book" size={32} />
-            <h2>
-              期末复习
+    <div className="home-page">
+      <div className="home-screen home-hero-screen">
+        <section className="hero container">
+          <div className="hero-copy">
+            <div className="eyebrow">
+              <Sparkles size={16} /> 为校园里的每一个「不会」准备
+            </div>
+            <h1>
+              把 AI 用起来，
               <br />
-              有个新思路。
-            </h2>
-          </div>
-          <div className="message message-user">
-            课件有点多，不知道怎么复习……
-          </div>
-          <div className="message message-agent">
-            <span className="message-author">
-              <Sparkles size={16} /> 复习助手 · 能做什么
-            </span>
-            <p>先整理知识框架，再把复习拆成每天的小任务。</p>
-            <div className="mini-tasks">
+              <span>把时间省下来。</span>
+            </h1>
+            <p className="hero-description">
+              想用 ChatGPT，不知道从哪开始？
+              <br />
+              从订阅协助到专属助手，找到适合你的 AI 用法。
+            </p>
+            <div className="hero-actions">
+              <Button asChild>
+                <Link href="#services">
+                  看看能帮我什么 <ArrowUpRight size={18} />
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/custom">我想定制助手</Link>
+              </Button>
+            </div>
+            <div className="hero-points">
               <span>
-                <Check size={15} /> 归纳知识点
+                <Check size={16} /> 先讲清需求
               </span>
               <span>
-                <Check size={15} /> 制定复习计划
+                <Check size={16} /> 再确认报价
               </span>
               <span>
-                <Check size={15} /> 生成自测练习
+                <Check size={16} /> 约定交付内容
               </span>
             </div>
           </div>
-          <div className="board-bottom">
-            <span>使用场景示意</span>
-            <Link href="/custom?scene=期末复习">
-              定制我的复习助手 <ArrowUpRight size={16} />
-            </Link>
+          <div className="hero-board">
+            <div className="board-heading">
+              <span className="tiny-label">今天，给自己减点负</span>
+              <span className="board-index">01 / 04</span>
+            </div>
+            <div className="board-title">
+              <ServiceIcon name="book" size={32} />
+              <h2>
+                期末复习
+                <br />
+                有个新思路。
+              </h2>
+            </div>
+            <div className="message message-user">
+              课件有点多，不知道怎么复习……
+            </div>
+            <div className="message message-agent">
+              <span className="message-author">
+                <Sparkles size={16} /> 复习助手 · 能做什么
+              </span>
+              <p>先整理知识框架，再把复习拆成每天的小任务。</p>
+              <div className="mini-tasks">
+                <span>
+                  <Check size={15} /> 归纳知识点
+                </span>
+                <span>
+                  <Check size={15} /> 制定复习计划
+                </span>
+                <span>
+                  <Check size={15} /> 生成自测练习
+                </span>
+              </div>
+            </div>
+            <div className="board-bottom">
+              <span>使用场景示意</span>
+              <Link href="/custom?scene=期末复习">
+                定制我的复习助手 <ArrowUpRight size={16} />
+              </Link>
+            </div>
+          </div>
+        </section>
+        <div className="intro-strip">
+          <div className="container">
+            <span>少一点摸索，多一点进展。</span>
+            <span>学习 / 求职 / 创作 / 日常效率</span>
+            <ArrowDown size={19} />
           </div>
         </div>
-      </section>
-      <div className="intro-strip">
-        <div className="container">
-          <span>少一点摸索，多一点进展。</span>
-          <span>学习 / 求职 / 创作 / 日常效率</span>
-          <ArrowDown size={19} />
-        </div>
       </div>
-      <section id="services" className="section container">
+      <section id="services" className="section container home-screen">
         <div className="section-heading">
           <div>
             <p className="eyebrow">WHAT WE CAN HELP</p>
@@ -141,7 +143,7 @@ export default function Home() {
           ))}
         </div>
       </section>
-      <section className="scenarios-section">
+      <section className="scenarios-section home-screen">
         <div className="section container">
           <div className="section-heading">
             <div>
@@ -177,7 +179,7 @@ export default function Home() {
           </p>
         </div>
       </section>
-      <section className="section container">
+      <section className="section container home-screen">
         <div className="section-heading">
           <div>
             <p className="eyebrow">HOW IT WORKS</p>
@@ -199,7 +201,7 @@ export default function Home() {
           ))}
         </div>
       </section>
-      <section className="section container faq-section">
+      <section className="section container faq-section home-screen">
         <div>
           <p className="eyebrow">BEFORE YOU START</p>
           <h2>你可能还想问。</h2>
@@ -238,6 +240,6 @@ export default function Home() {
           </Button>
         </div>
       </section>
-    </>
+    </div>
   );
 }

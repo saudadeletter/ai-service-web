@@ -42,8 +42,10 @@ export default async function Packages({
             <span className="pill">{p.service}</span>
             <h2>{p.name}</h2>
             <p className="catalog-price">
-              {money(p.priceCents)}
-              <small> / 参考价</small>
+              <strong className="catalog-price-amount">
+                {money(p.priceCents)}
+              </strong>
+              <small>/ 参考价</small>
             </p>
             <p className="preserve-text">{p.description}</p>
             <Button asChild>
