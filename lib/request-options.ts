@@ -33,6 +33,7 @@ export const statusLabels = {
 export type Status = keyof typeof statusLabels;
 
 export type PublicRequest = {
+  order: import("./order-options").PublicOrder | null;
   number: string;
   service: string;
   scene: string;

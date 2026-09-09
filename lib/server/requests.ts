@@ -1,4 +1,5 @@
 import "server-only";
+import { publicOrderFields } from "./commerce";
 import { randomBytes } from "node:crypto";
 import { db } from "./db";
 import { hash } from "./auth";
@@ -6,6 +7,7 @@ import { HttpError } from "./http";
 import { requestSchema, updateSchema } from "./validation";
 
 export const publicFields = {
+  order: { select: publicOrderFields },
   number: true,
   service: true,
   scene: true,

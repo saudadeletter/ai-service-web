@@ -1,3 +1,4 @@
+import { AdminNav } from "@/components/admin-nav";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdminPage } from "@/lib/server/auth";
@@ -56,6 +57,7 @@ export default async function AdminPage({
     `/admin?${new URLSearchParams({ q, status: status || "", page: String(target) })}`;
   return (
     <div className="container page-shell">
+      <AdminNav />
       <div className="section-heading">
         <div>
           <p className="eyebrow">管理后台 · {username}</p>

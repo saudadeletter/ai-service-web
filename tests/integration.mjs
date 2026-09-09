@@ -1,3 +1,4 @@
+import { commerceChecks } from "./commerce.mjs";
 import assert from "node:assert/strict";
 import { randomBytes, createHash, scryptSync } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -43,6 +44,7 @@ let server;
 let serverLog = "";
 let checks = 0;
 const requestIds = [];
+const packageIds = [];
 const sessionHashes = [];
 let requestSequence = 0;
 async function check(name, action) {
@@ -282,6 +284,7 @@ try {
     assert.deepEqual(
       Object.keys(result.data).sort(),
       [
+        "order",
         "number",
         "service",
         "scene",
@@ -377,6 +380,18 @@ try {
       409,
     );
   });
+  await commerceChecks({
+    check,
+    call,
+    sql,
+    base,
+    cookie,
+    id,
+    number,
+    lookupKey,
+    requestIds,
+    packageIds,
+  });
   await check("退出后旧 Cookie 无法继续访问后台", async () => {
     assert.equal(
       (await call("/api/admin/logout", {}, { cookie })).response.status,
@@ -428,6 +443,9 @@ try {
     const result = await call("/api/requests/lookup", { number, lookupKey });
     assert.equal(result.response.status, 200);
     assert.equal(result.data.status, "IN_PROGRESS");
+    assert.equal(result.data.order.status, "COMPLETED");
+    assert.equal(result.data.order.paidCents, 8888);
+    assert.equal(result.data.order.refundedCents, 888);
   });
   await check("管理员密码变更后旧会话失效", async () => {
     assert.equal(
@@ -443,6 +461,16 @@ try {
   console.log(`\n${checks} integration checks passed.`);
 } finally {
   await stop();
+  if (requestIds.length)
+    await sql.query(
+      'DELETE FROM "ServiceOrder" WHERE "requestId" = ANY($1::text[])',
+      [requestIds],
+    );
+  if (packageIds.length)
+    await sql.query(
+      'DELETE FROM "ServicePackage" WHERE "id" = ANY($1::text[])',
+      [packageIds],
+    );
   if (requestIds.length)
     await sql.query(
       'DELETE FROM "ServiceRequest" WHERE "id" = ANY($1::text[])',

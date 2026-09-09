@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 const links = [
   ["服务项目", "/#services"],
-  ["定制 AI 助手", "/custom"],
+  ["服务套餐", "/packages"],
   ["进度查询", "/orders"],
   ["常见问题", "/help"],
 ];

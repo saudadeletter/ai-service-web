@@ -166,7 +166,12 @@ export function RequestForm() {
               required
               minLength={10}
               maxLength={2000}
-              defaultValue={requestedScene?.prompt || ""}
+              defaultValue={
+                requestedScene?.prompt ||
+                (params.get("package")
+                  ? `我想咨询「${params.get("package")!.slice(0, 80)}」，具体需求是：`
+                  : "")
+              }
               placeholder="例如：我有一门课的 8 份课件，希望整理知识框架，并安排 7 天复习计划。"
               aria-describedby="description-help"
             />

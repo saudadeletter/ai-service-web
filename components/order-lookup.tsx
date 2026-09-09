@@ -1,4 +1,5 @@
 "use client";
+import { money, paymentLabel, orderStatusLabels } from "@/lib/order-options";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ export function OrderLookup() {
     setDemo(true);
     setResult({
       number: "DEMO-2026",
+      order: null,
       service: "专属 AI 助手定制",
       scene: "期末复习",
       status: "IN_PROGRESS",
@@ -46,7 +48,8 @@ export function OrderLookup() {
   return (
     <>
       <section className="panel">
-        <h2>查看我的需求进度</h2>
+        <h2>查看我的需求与订单进度</h2>
+        <p>生成订单后，继续使用原需求编号和查询码查询。</p>
         <form onSubmit={lookup}>
           <div className="field">
             <label htmlFor="request-number">需求编号</label>
@@ -133,6 +136,45 @@ export function OrderLookup() {
             <p className="preserve-text">
               {result.publicNote || "需求已收到，等待管理员与你沟通。"}
             </p>
+            {result.order && (
+              <div className="public-order">
+                <h3>关联订单 · {result.order.number}</h3>
+                <p>
+                  {result.order.title} ·{" "}
+                  {orderStatusLabels[result.order.status]}
+                </p>
+                <div className="metadata-row">
+                  <span>成交金额</span>
+                  <span>{money(result.order.amountCents)}</span>
+                </div>
+                <div className="metadata-row">
+                  <span>登记收款</span>
+                  <span>{money(result.order.paidCents)}</span>
+                </div>
+                <div className="metadata-row">
+                  <span>登记退款</span>
+                  <span>{money(result.order.refundedCents)}</span>
+                </div>
+                <p>
+                  {paymentLabel(result.order)}
+                  。以上由管理员核对实际交易后登记，如有疑问请联系服务方。
+                </p>
+                <h3>交付约定</h3>
+                <p className="preserve-text">{result.order.deliveryTerms}</p>
+                {result.order.publicNote && (
+                  <>
+                    <h3>订单处理说明</h3>
+                    <p className="preserve-text">{result.order.publicNote}</p>
+                  </>
+                )}
+                {result.order.deliveryNote && (
+                  <>
+                    <h3>交付内容</h3>
+                    <p className="preserve-text">{result.order.deliveryNote}</p>
+                  </>
+                )}
+              </div>
+            )}
           </section>
         )}
       </div>

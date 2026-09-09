@@ -14,7 +14,7 @@ export default function OrdersPage() {
         <div className="page-intro">
           <p className="eyebrow">FOLLOW THE PROGRESS</p>
           <h1>进展，心里有数。</h1>
-          <p>凭需求编号和查询码，查看最新处理进度。</p>
+          <p>凭原需求编号和查询码，查看咨询、订单及交付进度。</p>
         </div>
         <div className="notice">
           查询码相当于这份需求的查看凭证，请妥善保管。此处不展示联系方式与管理员内部备注。

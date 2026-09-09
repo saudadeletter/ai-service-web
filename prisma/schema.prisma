@@ -35,6 +35,7 @@ model ServiceRequest {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   events       RequestEvent[]
+  order        ServiceOrder?
 
   @@index([status, createdAt])
   @@index([updatedAt])
@@ -66,4 +67,90 @@ model RateBucket {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+
+enum OrderStatus {
+  CONFIRMED
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum MoneyEntryKind {
+  PAYMENT
+  REFUND
+}
+
+model ServicePackage {
+  id           String @id @default(uuid())
+  creationHash String
+  name         String
+  service      String
+  description  String
+  priceCents   Int
+  isActive     Boolean @default(false)
+  revision     Int @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       ServiceOrder[]
+
+  @@index([isActive, createdAt])
+}
+
+model ServiceOrder {
+  id             String @id @default(cuid())
+  number         String @unique
+  requestId      String @unique
+  request        ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  packageId      String
+  package        ServicePackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  conversionHash String
+  title          String
+  service        String
+  amountCents    Int
+  paidCents      Int @default(0)
+  refundedCents  Int @default(0)
+  deliveryTerms  String
+  deliveryNote   String @default("")
+  publicNote     String @default("")
+  status         OrderStatus @default(CONFIRMED)
+  revision       Int @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  events         OrderEvent[]
+  moneyEntries   MoneyEntry[]
+
+  @@index([status, createdAt])
+}
+
+model OrderEvent {
+  id           String @id @default(cuid())
+  orderId      String
+  order        ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status       OrderStatus
+  publicNote   String
+  deliveryNote String
+  actor        String
+  createdAt    DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model MoneyEntry {
+  id             String @id @default(cuid())
+  orderId        String
+  order          ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  idempotencyKey String @unique
+  payloadHash    String
+  kind           MoneyEntryKind
+  amountCents    Int
+  reference      String
+  note           String
+  actor          String
+  createdAt      DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@unique([orderId, kind, reference])
 }

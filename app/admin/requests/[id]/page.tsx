@@ -1,3 +1,5 @@
+import { OrderConvert } from "@/components/order-convert";
+import { AdminNav } from "@/components/admin-nav";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/server/auth";
@@ -16,11 +18,30 @@ export default async function RequestDetail({
   if (!/^[a-z0-9]{20,32}$/.test(id)) notFound();
   const item = await db().serviceRequest.findUnique({
     where: { id },
-    include: { events: { orderBy: { createdAt: "desc" }, take: 30 } },
+    include: {
+      order: { select: { id: true, number: true } },
+      events: { orderBy: { createdAt: "desc" }, take: 30 },
+    },
   });
   if (!item) notFound();
+  const packages =
+    !item.order && !["COMPLETED", "CLOSED"].includes(item.status)
+      ? await db().servicePackage.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            service: true,
+            priceCents: true,
+            revision: true,
+          },
+          orderBy: { name: "asc" },
+        })
+      : [];
+
   return (
     <div className="container page-shell">
+      <AdminNav />
       <div className="breadcrumbs">
         <Link href="/admin">需求管理</Link>
         <span>/</span>
@@ -70,6 +91,27 @@ export default async function RequestDetail({
             <h3>具体描述</h3>
             <p className="preserve-text">{item.description}</p>
           </section>
+          {item.order ? (
+            <section className="panel">
+              <h2>关联订单</h2>
+              <Link
+                className="text-link"
+                href={`/admin/orders/${item.order.id}`}
+              >
+                {item.order.number} · 处理订单
+              </Link>
+              <p>咨询记录与订单处理分别保存。</p>
+            </section>
+          ) : (
+            !["COMPLETED", "CLOSED"].includes(item.status) && (
+              <OrderConvert
+                key={item.revision}
+                requestId={item.id}
+                revision={item.revision}
+                packages={packages}
+              />
+            )
+          )}
           <RequestEditor
             id={item.id}
             status={item.status}
