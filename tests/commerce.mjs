@@ -203,6 +203,7 @@ export async function commerceChecks({
         "amountCents",
         "paidCents",
         "refundedCents",
+        "needsReview",
         "deliveryTerms",
         "deliveryNote",
         "publicNote",

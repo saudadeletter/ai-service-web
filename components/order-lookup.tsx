@@ -139,6 +139,11 @@ export function OrderLookup() {
             {result.order && (
               <div className="public-order">
                 <h3>关联订单 · {result.order.number}</h3>
+                {result.order.needsReview && (
+                  <p role="status" className="notice">
+                    收退款记录正在核对，显示金额可能调整。服务方核对完成后会更新，请以实际交易为准。
+                  </p>
+                )}
                 <p>
                   {result.order.title} ·{" "}
                   {orderStatusLabels[result.order.status]}
@@ -148,11 +153,11 @@ export function OrderLookup() {
                   <span>{money(result.order.amountCents)}</span>
                 </div>
                 <div className="metadata-row">
-                  <span>登记收款</span>
+                  <span>有效登记收款</span>
                   <span>{money(result.order.paidCents)}</span>
                 </div>
                 <div className="metadata-row">
-                  <span>登记退款</span>
+                  <span>有效登记退款</span>
                   <span>{money(result.order.refundedCents)}</span>
                 </div>
                 <p>

@@ -71,3 +71,27 @@ export const moneyEntrySchema = z
     confirmed: z.literal(true, { error: "请核对实际到账或退款记录后确认。" }),
   })
   .strict();
+
+const correctionFields = {
+  revision,
+  idempotencyKey: z.string().regex(/^[a-f0-9]{48}$/),
+  reason: z
+    .string()
+    .trim()
+    .min(10, "请至少用 10 个字符说明核对情况和更正原因。")
+    .max(2000),
+  confirmed: z.literal(true, { error: "请核对实际交易后勾选确认。" }),
+};
+export const correctionSchema = z.object(correctionFields).strict();
+export const ledgerReviewSchema = z
+  .object({
+    ...correctionFields,
+    status: z.enum([
+      "CONFIRMED",
+      "IN_PROGRESS",
+      "DELIVERED",
+      "COMPLETED",
+      "CANCELLED",
+    ]),
+  })
+  .strict();

@@ -1,3 +1,4 @@
+import { LedgerAction } from "@/components/ledger-actions";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/server/auth";
@@ -22,6 +23,7 @@ export default async function OrderDetail({
       request: { select: { id: true, number: true, contact: true } },
       events: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 30 },
       moneyEntries: {
+        include: { correction: true },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 50,
       },
@@ -50,11 +52,11 @@ export default async function OrderDetail({
           <strong>{money(item.amountCents)}</strong>
         </div>
         <div className="stat">
-          <span>累计登记收款</span>
+          <span>有效登记收款</span>
           <strong>{money(item.paidCents)}</strong>
         </div>
         <div className="stat">
-          <span>累计登记退款</span>
+          <span>有效登记退款</span>
           <strong>{money(item.refundedCents)}</strong>
         </div>
       </div>
@@ -69,12 +71,24 @@ export default async function OrderDetail({
           套餐名称、成交金额和交付约定已固定，后续修改套餐不会改变本订单。
         </p>
       </section>
+      {item.needsReview && (
+        <section className="panel">
+          <h2>收退款记录待复核</h2>
+          <p>
+            已有登记被冲正。请先核对有效流水与实际交易，补录正确记录后完成复核。复核完成前暂停更新交付状态。
+          </p>
+          <Link className="text-link" href={`/admin/orders/${id}/ledger`}>
+            查看完整流水
+          </Link>
+        </section>
+      )}
       <div className="commerce-columns">
         <OrderEditor
           key={`order-${item.revision}`}
           id={id}
           revision={item.revision}
           status={item.status}
+          needsReview={item.needsReview}
           publicNote={item.publicNote}
           deliveryNote={item.deliveryNote}
         />
@@ -82,11 +96,16 @@ export default async function OrderDetail({
           key={`money-${item.revision}`}
           id={id}
           revision={item.revision}
-          cancelled={item.status === "CANCELLED"}
+          cancelled={item.status === "CANCELLED" && !item.needsReview}
         />
       </div>
       <section className="panel">
         <h2>收退款记录</h2>
+        <p>
+          <Link className="text-link" href={`/admin/orders/${id}/ledger`}>
+            查看全部流水、筛选或登记冲正
+          </Link>
+        </p>
         <p>
           共 {item._count.moneyEntries} 笔，显示最近 50
           笔。凭据与核对说明仅管理员可见。
@@ -111,10 +130,23 @@ export default async function OrderDetail({
                     <br />
                     {e.actor}
                   </td>
-                  <td>{e.kind === "PAYMENT" ? "收款" : "退款"}</td>
+                  <td>
+                    {e.kind === "PAYMENT" ? "收款" : "退款"}
+                    {e.correction && <p>已冲正，不计入合计</p>}
+                  </td>
                   <td>{money(e.amountCents)}</td>
                   <td>{e.reference}</td>
-                  <td className="preserve-text">{e.note}</td>
+                  <td className="preserve-text">
+                    {e.note}
+                    <p>
+                      <Link
+                        className="text-link"
+                        href={`/admin/orders/${id}/ledger/${e.id}`}
+                      >
+                        {e.correction ? "查看更正记录" : "核对 / 冲正"}
+                      </Link>
+                    </p>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -124,8 +156,31 @@ export default async function OrderDetail({
           <p className="admin-empty">尚未登记收款或退款。</p>
         )}
       </section>
+      {item.needsReview && (
+        <LedgerAction
+          key={`review-${item.revision}`}
+          orderId={id}
+          revision={item.revision}
+          status={item.status}
+        />
+      )}
       <section className="panel">
         <h2>处理与交付记录</h2>
+        <p>
+          <Link
+            className="text-link"
+            href={`/admin/orders/${id}/ledger?view=events`}
+          >
+            查看全部处理历史
+          </Link>{" "}
+          ·{" "}
+          <Link
+            className="text-link"
+            href={`/admin/orders/${id}/ledger?view=reviews`}
+          >
+            查看账目复核记录
+          </Link>
+        </p>
         <p>显示最近 30 次保存。各次说明均保留，便于追溯。</p>
         <ol className="timeline">
           {item.events.map((e) => (

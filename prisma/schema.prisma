@@ -121,6 +121,8 @@ model ServiceOrder {
   updatedAt      DateTime @updatedAt
   events         OrderEvent[]
   moneyEntries   MoneyEntry[]
+  ledgerReviews  LedgerReview[]
+  needsReview    Boolean @default(false)
 
   @@index([status, createdAt])
 }
@@ -152,5 +154,36 @@ model MoneyEntry {
   createdAt      DateTime @default(now())
 
   @@index([orderId, createdAt])
-  @@unique([orderId, kind, reference])
+  correction     MoneyCorrection?
+
+  @@index([orderId, kind, reference])
+}
+
+
+model MoneyCorrection {
+  id             String @id @default(cuid())
+  entryId        String @unique
+  entry          MoneyEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  idempotencyKey String @unique
+  payloadHash    String
+  reason         String
+  actor          String
+  createdAt      DateTime @default(now())
+}
+
+model LedgerReview {
+  id             String @id @default(cuid())
+  orderId        String
+  order          ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  idempotencyKey String @unique
+  payloadHash    String
+  reason         String
+  actor          String
+  previousStatus OrderStatus
+  status         OrderStatus
+  paidCents      Int
+  refundedCents  Int
+  createdAt      DateTime @default(now())
+
+  @@index([orderId, createdAt])
 }

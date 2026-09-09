@@ -1464,3 +1464,20 @@ th {
     grid-template-columns: 1fr;
   }
 }
+
+.admin-nav a[aria-current="page"] {
+  background: var(--green);
+  border-color: var(--green-dark);
+}
+.order-filters {
+  grid-template-columns: minmax(0, 1fr) 180px auto auto;
+}
+.order-filters .checkbox-field {
+  margin: 0;
+  padding: 8px 0;
+}
+@media (max-width: 760px) {
+  .order-filters {
+    grid-template-columns: 1fr;
+  }
+}

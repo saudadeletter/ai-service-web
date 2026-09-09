@@ -20,7 +20,9 @@ export function paymentLabel(order: {
   amountCents: number;
   paidCents: number;
   refundedCents: number;
+  needsReview?: boolean;
 }) {
+  if (order.needsReview) return "收退款记录待复核";
   if (order.refundedCents > 0)
     return order.refundedCents === order.paidCents
       ? "已全额登记退款"
@@ -38,6 +40,7 @@ export type PackageOption = {
   revision: number;
 };
 export type PublicOrder = {
+  needsReview: boolean;
   number: string;
   title: string;
   service: string;

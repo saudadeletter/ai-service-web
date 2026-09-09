@@ -10,6 +10,8 @@ import {
   convertSchema,
   orderUpdateSchema,
   moneyEntrySchema,
+  correctionSchema,
+  ledgerReviewSchema,
 } from "./commerce-validation";
 import { nextOrderStatuses } from "@/lib/order-options";
 
@@ -21,6 +23,7 @@ export const publicPackageFields = {
   priceCents: true,
 } as const;
 export const publicOrderFields = {
+  needsReview: true,
   number: true,
   title: true,
   service: true,
@@ -133,6 +136,8 @@ export async function updateOrder(id: string, input: unknown, actor: string) {
   return db().$transaction(async (tx) => {
     const order = await lockedOrder(tx, id);
     if (order.revision !== revision) throw conflict();
+    if (order.needsReview)
+      throw new HttpError(409, "收退款记录尚待复核，请先完成账目复核。");
     if (data.status !== order.status) {
       if (!nextOrderStatuses[order.status].includes(data.status))
         throw new HttpError(409, "当前订单不能变更到所选状态。");
@@ -172,12 +177,13 @@ export async function recordMoney(id: string, input: unknown, actor: string) {
       return { id: existing.id, revision: order.revision };
     }
     if (order.revision !== revision) throw conflict();
-    if (order.status === "CANCELLED")
+    if (order.status === "CANCELLED" && !order.needsReview)
       throw new HttpError(409, "已取消的订单不能登记收退款。");
     if (data.kind === "PAYMENT") {
       if (
-        order.refundedCents > 0 ||
-        !["CONFIRMED", "IN_PROGRESS"].includes(order.status)
+        !order.needsReview &&
+        (order.refundedCents > 0 ||
+          !["CONFIRMED", "IN_PROGRESS"].includes(order.status))
       )
         throw new HttpError(
           409,
@@ -187,13 +193,14 @@ export async function recordMoney(id: string, input: unknown, actor: string) {
         throw new HttpError(400, "累计收款不能超过成交金额。");
     } else if (amount > order.paidCents - order.refundedCents)
       throw new HttpError(400, "退款金额不能超过尚未退还的收款。");
-    const referenceUsed = await tx.moneyEntry.findUnique({
+    // Every ledger writer holds this order's lock. Corrected references can be
+    // reused; concurrent active entries with the same reference are rejected.
+    const referenceUsed = await tx.moneyEntry.findFirst({
       where: {
-        orderId_kind_reference: {
-          orderId: id,
-          kind: data.kind,
-          reference: data.reference,
-        },
+        orderId: id,
+        kind: data.kind,
+        reference: data.reference,
+        correction: null,
       },
     });
     if (referenceUsed)
@@ -218,5 +225,142 @@ export async function recordMoney(id: string, input: unknown, actor: string) {
       },
     });
     return { id: entry.id, revision: updated.revision };
+  });
+}
+
+export async function correctMoney(
+  id: string,
+  entryId: string,
+  input: unknown,
+  actor: string,
+) {
+  const { revision, idempotencyKey, reason } = correctionSchema.parse(input);
+  const payloadHash = hash(JSON.stringify({ id, entryId, reason }));
+  return db().$transaction(async (tx) => {
+    const order = await lockedOrder(tx, id);
+    const existing = await tx.moneyCorrection.findUnique({
+      where: { idempotencyKey },
+    });
+    if (existing) {
+      if (existing.payloadHash !== payloadHash || existing.entryId !== entryId)
+        throw conflict();
+      return { id: existing.id, revision: order.revision };
+    }
+    if (order.revision !== revision) throw conflict();
+    const entry = await tx.moneyEntry.findFirst({
+      where: { id: entryId, orderId: id },
+      include: { correction: true },
+    });
+    if (!entry) throw new HttpError(404, "此订单中不存在这笔流水。");
+    if (entry.correction)
+      throw new HttpError(409, "这笔流水已经冲正，不能重复冲正。");
+    const paidCents =
+      order.paidCents - (entry.kind === "PAYMENT" ? entry.amountCents : 0);
+    const refundedCents =
+      order.refundedCents - (entry.kind === "REFUND" ? entry.amountCents : 0);
+    if (paidCents < 0 || refundedCents < 0 || refundedCents > paidCents)
+      throw new HttpError(
+        409,
+        "冲正后退款将超过有效收款，请先核对相关退款登记；确属错误的退款需先冲正。",
+      );
+    const correction = await tx.moneyCorrection.create({
+      data: { entryId, idempotencyKey, payloadHash, reason, actor },
+    });
+    const updated = await tx.serviceOrder.update({
+      where: { id },
+      data: {
+        paidCents,
+        refundedCents,
+        needsReview: true,
+        revision: { increment: 1 },
+      },
+    });
+    return { id: correction.id, revision: updated.revision };
+  });
+}
+
+export async function reviewLedger(id: string, input: unknown, actor: string) {
+  const { revision, idempotencyKey, reason, status } =
+    ledgerReviewSchema.parse(input);
+  const payloadHash = hash(JSON.stringify({ id, reason, status }));
+  return db().$transaction(async (tx) => {
+    const order = await lockedOrder(tx, id);
+    const existing = await tx.ledgerReview.findUnique({
+      where: { idempotencyKey },
+    });
+    if (existing) {
+      if (existing.payloadHash !== payloadHash || existing.orderId !== id)
+        throw conflict();
+      return { id: existing.id, revision: order.revision };
+    }
+    if (order.revision !== revision) throw conflict();
+    if (!order.needsReview)
+      throw new HttpError(409, "订单当前没有待复核的账目。");
+    if (
+      status !== order.status &&
+      status !== "CONFIRMED" &&
+      status !== "CANCELLED"
+    )
+      throw new HttpError(
+        409,
+        "复核只可保留原状态、退回待处理或取消订单，不能跳过交付流程。",
+      );
+    if (status === "CANCELLED" && order.paidCents !== order.refundedCents)
+      throw new HttpError(
+        409,
+        "已取消订单必须退清有效收款；请核对记录，或退回待处理。",
+      );
+    if (
+      ["IN_PROGRESS", "DELIVERED", "COMPLETED"].includes(status) &&
+      order.paidCents !== order.amountCents
+    )
+      throw new HttpError(
+        409,
+        "当前有效收款不足，不能保留该交付状态；请补齐正确登记或退回待处理。",
+      );
+    if (["DELIVERED", "COMPLETED"].includes(status) && !order.deliveryNote)
+      throw new HttpError(409, "缺少交付说明，请退回待处理后补充。");
+    const sums = await tx.moneyEntry.groupBy({
+      by: ["kind"],
+      where: { orderId: id, correction: null },
+      _sum: { amountCents: true },
+    });
+    const sum = (kind: "PAYMENT" | "REFUND") =>
+      sums.find((s) => s.kind === kind)?._sum.amountCents || 0;
+    if (
+      sum("PAYMENT") !== order.paidCents ||
+      sum("REFUND") !== order.refundedCents
+    )
+      throw new HttpError(
+        409,
+        "流水合计与订单金额不一致，请停止处理并核对数据。",
+      );
+    const review = await tx.ledgerReview.create({
+      data: {
+        orderId: id,
+        idempotencyKey,
+        payloadHash,
+        reason,
+        actor,
+        previousStatus: order.status,
+        status,
+        paidCents: order.paidCents,
+        refundedCents: order.refundedCents,
+      },
+    });
+    const updated = await tx.serviceOrder.update({
+      where: { id },
+      data: { status, needsReview: false, revision: { increment: 1 } },
+    });
+    await tx.orderEvent.create({
+      data: {
+        orderId: id,
+        actor,
+        status,
+        publicNote: order.publicNote,
+        deliveryNote: order.deliveryNote,
+      },
+    });
+    return { id: review.id, revision: updated.revision };
   });
 }

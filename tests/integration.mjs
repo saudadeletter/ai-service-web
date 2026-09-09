@@ -1,3 +1,5 @@
+import { migrationUpgradeCheck } from "./migration-upgrade.mjs";
+import { correctionChecks } from "./corrections.mjs";
 import { commerceChecks } from "./commerce.mjs";
 import assert from "node:assert/strict";
 import { randomBytes, createHash, scryptSync } from "node:crypto";
@@ -149,6 +151,7 @@ try {
   });
   const [code] = await once(migration, "exit");
   assert.equal(code, 0, migrationLog);
+  await migrationUpgradeCheck({ check, sql });
   await start();
   await check("未登录时后台重定向且不返回客户信息", async () => {
     const response = await fetch(base + "/admin", { redirect: "manual" });
@@ -392,6 +395,18 @@ try {
     requestIds,
     packageIds,
   });
+  await correctionChecks({
+    check,
+    call,
+    sql,
+    base,
+    cookie,
+    id,
+    number,
+    lookupKey,
+    requestIds,
+    packageIds,
+  });
   await check("退出后旧 Cookie 无法继续访问后台", async () => {
     assert.equal(
       (await call("/api/admin/logout", {}, { cookie })).response.status,
@@ -446,6 +461,7 @@ try {
     assert.equal(result.data.order.status, "COMPLETED");
     assert.equal(result.data.order.paidCents, 8888);
     assert.equal(result.data.order.refundedCents, 888);
+    assert.equal(result.data.order.needsReview, false);
   });
   await check("管理员密码变更后旧会话失效", async () => {
     assert.equal(

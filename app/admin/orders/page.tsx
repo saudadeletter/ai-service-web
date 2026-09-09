@@ -15,7 +15,12 @@ export const metadata = { title: "订单管理" };
 export default async function Orders({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    q?: string;
+    status?: string;
+    review?: string;
+  }>;
 }) {
   await requireAdminPage();
   const params = await searchParams;
@@ -32,6 +37,7 @@ export default async function Orders({
   const where: Prisma.ServiceOrderWhereInput = {
     ...(q ? { number: { contains: q, mode: "insensitive" } } : {}),
     ...(status ? { status } : {}),
+    ...(params.review === "pending" ? { needsReview: true } : {}),
   };
   const [items, total] = await Promise.all([
     db().serviceOrder.findMany({
@@ -46,6 +52,7 @@ export default async function Orders({
         status: true,
         amountCents: true,
         paidCents: true,
+        needsReview: true,
         refundedCents: true,
         createdAt: true,
       },
@@ -53,7 +60,7 @@ export default async function Orders({
     db().serviceOrder.count({ where }),
   ]);
   const href = (p: number) =>
-    `?${new URLSearchParams({ q, status: status || "", page: String(p) })}`;
+    `?${new URLSearchParams({ q, status: status || "", review: params.review === "pending" ? "pending" : "", page: String(p) })}`;
   return (
     <div className="container page-shell">
       <AdminNav />
@@ -65,7 +72,7 @@ export default async function Orders({
         </div>
       </div>
       <section className="panel">
-        <form action="/admin/orders" className="admin-filters">
+        <form action="/admin/orders" className="admin-filters order-filters">
           <div className="field">
             <label htmlFor="q">搜索订单编号</label>
             <input id="q" name="q" defaultValue={q} maxLength={100} />
@@ -81,6 +88,15 @@ export default async function Orders({
               ))}
             </select>
           </div>
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              name="review"
+              value="pending"
+              defaultChecked={params.review === "pending"}
+            />
+            <span>仅看待复核订单</span>
+          </label>
           <Button type="submit">筛选</Button>
         </form>
         <div className="table-wrap">

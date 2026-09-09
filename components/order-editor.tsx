@@ -14,12 +14,14 @@ export function OrderEditor({
   status,
   publicNote,
   deliveryNote,
+  needsReview,
 }: {
   id: string;
   revision: number;
   status: OrderStatus;
   publicNote: string;
   deliveryNote: string;
+  needsReview: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -54,7 +56,8 @@ export function OrderEditor({
   return (
     <form className="panel" onSubmit={save}>
       <h2>处理与交付</h2>
-      <fieldset disabled={pending} className="plain-fieldset">
+      {needsReview && <p>请先完成账目复核，再更新处理进度。</p>}
+      <fieldset disabled={pending || needsReview} className="plain-fieldset">
         <div className="field">
           <label htmlFor="order-status">订单状态</label>
           <select id="order-status" name="status" defaultValue={status}>
@@ -182,7 +185,9 @@ export function MoneyForm({
             maxLength={120}
             autoComplete="off"
           />
-          <small>使用实际交易单号；同一订单同类凭据只能登记一次。</small>
+          <small>
+            使用实际交易单号；同一订单同类凭据只能有一笔有效登记。原登记冲正后可重新录入。
+          </small>
         </div>
         <div className="field">
           <label htmlFor="money-note">核对说明（仅管理员可见）</label>
