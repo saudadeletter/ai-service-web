@@ -1,5 +1,10 @@
-FROM node:24-bookworm-slim AS deps
+FROM node:24-bookworm-slim AS base
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
+
+FROM base AS deps
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
@@ -8,8 +13,7 @@ RUN npm ci --no-audit --no-fund
 FROM deps AS migrator
 CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
-FROM node:24-bookworm-slim AS builder
-WORKDIR /app
+FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -17,8 +21,7 @@ ARG NEXT_PUBLIC_ICP_NUMBER
 ENV NEXT_PUBLIC_ICP_NUMBER=$NEXT_PUBLIC_ICP_NUMBER
 RUN npm run build
 
-FROM node:24-bookworm-slim AS runner
-WORKDIR /app
+FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0

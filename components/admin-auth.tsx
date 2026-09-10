@@ -17,7 +17,7 @@ export function LoginForm() {
         username: data.get("username"),
         password: data.get("password"),
       });
-      router.replace("/admin");
+      router.replace("/admin/overview");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "登录失败。");

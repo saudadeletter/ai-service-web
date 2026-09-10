@@ -14,6 +14,7 @@
 | `/custom`                | 提交需求；也可只生成、复制和下载本地草稿            |
 | `/orders`                | 需求与关联订单进度查询；另保留 `DEMO-2026` 演示按钮 |
 | `/admin/login`           | 管理员登录                                          |
+| `/admin/overview`        | 管理工作台：待办计数、咨询与复核队列、交付状态概览  |
 | `/admin`                 | 需求列表、编号搜索、状态筛选与分页                  |
 | `/admin/requests/[id]`   | 查看详情、更新状态、用户可见说明和内部备注          |
 | `/help`                  | 服务与信息使用说明                                  |
@@ -22,12 +23,13 @@
 
 新增页面：
 
-| 路径                 | 功能                                     |
-| -------------------- | ---------------------------------------- |
-| `/packages`          | 已上架套餐、参考价及咨询入口             |
-| `/admin/packages`    | 套餐列表、创建、改价、上架/下架          |
-| `/admin/orders`      | 订单编号搜索、状态筛选与分页             |
-| `/admin/orders/[id]` | 成交快照、收退款登记、交付说明与历史记录 |
+| 路径                 | 功能                                             |
+| -------------------- | ------------------------------------------------ |
+| `/packages`          | 已上架套餐、关键词搜索、分类筛选、价格排序与分页 |
+| `/packages/[id]`     | 已上架套餐的完整说明、参考价与咨询入口           |
+| `/admin/packages`    | 套餐列表、创建、改价、上架/下架                  |
+| `/admin/orders`      | 订单编号搜索、状态筛选与分页                     |
+| `/admin/orders/[id]` | 成交快照、收退款登记、交付说明与历史记录         |
 
 ## 从 v0.3 更新
 
@@ -196,15 +198,44 @@ set "TEST_DATABASE_URL=postgresql://用户名:密码@127.0.0.1:5432/ai_service_t
 npm run test:integration
 ```
 
-## 已有 Ubuntu Docker 部署升级
+## Linux Docker / Podman 部署与升级
 
-先备份数据库，停止旧网站实例后再应用新版本，避免升级期间混跑不同流水校验规则。数据库容器和卷保留：
+先备份数据库，并保留原项目目录和 `.env`。脚本要求 Bash、curl、flock、timeout 和已配置的 Compose provider；Rocky Linux 使用原来创建容器的普通用户运行，避免切换到 sudo 后访问另一套容器与卷。
 
 ```bash
-docker compose stop web
-docker compose up -d --build
-docker compose logs --tail=100 migrate web
+# Rocky Linux / Podman
+bash scripts/deploy.sh podman
+
+# Ubuntu / Docker
+bash scripts/deploy.sh docker
 ```
+
+脚本先构建 web 和 migrate 镜像，再启动数据库并等待就绪；成功后停止旧网站，执行一次性迁移，强制重新创建 web，检查 `/packages` 返回 HTTP 200。构建或数据库等待失败时不会进入停止网站步骤；迁移失败时保持网站停止，检查终端错误后修复并重新执行。迁移完成前不会启动新版网站，不删除数据卷、不改写 `.env`，也不会自动回退数据库。最后的页面检查失败表示部署尚未通过验收，网站容器可能仍在运行，可用下方日志命令排查。
+
+同一项目目录的部署通过文件锁串行执行。数据库与页面检查各最多尝试 30 次，每次有超时。Dockerfile 的公共基础阶段安装 OpenSSL 和 CA 证书；Compose 日志仅使用双方支持的 `max-size`，移除了 Podman 不支持的 `max-file`。
+
+Podman 排查命令（部分 podman-compose 不支持 `ps -a`，因此直接使用 Podman）：
+
+```bash
+podman ps -a
+podman compose -f compose.yaml logs --tail=100 db web
+```
+
+`migrate` 是一次性任务，退出码 0 正常。脚本使用 `run --rm` 执行本次迁移，以本次终端输出和退出码为准，旧的 `migrate_1` 容器日志可能属于上次部署。虚拟机重启后也可重新执行脚本；目前脚本不配置开机自启。
+
+网站继续只绑定 `127.0.0.1:3000`。Windows 本地浏览器测试时保持 SSH 隧道窗口打开：`ssh -N -L 3000:127.0.0.1:3000 anonymity@192.168.41.131`，再访问 `http://localhost:3000`，本地 `.env` 对应 `APP_URL=http://localhost:3000`、`TRUST_PROXY=false`。
+
+### 已应用旧补丁的工作区同步
+
+先运行 `git status --short`。如果存在之前通过 `git apply` 加入的页面、组件和样式改动，先保存，再拉取，避免覆盖或冲突：
+
+```bash
+git stash push -u -m "before-sync-service-pages"
+git -c http.version=HTTP/1.1 pull --ff-only
+git stash list
+```
+
+这次同步已包含首页动效、套餐筛选和详情，以及后台工作台。不要立即 `stash pop` 重复应用旧补丁；用 `git stash show --stat --include-untracked` 核对保存的内容，再单独恢复自己的额外改动。`.env` 被 Git 忽略，以上命令不移动它；数据库卷也不在 Git 工作区内。如果 `pull --ff-only` 报分支分叉，保留 stash 和本地提交，先检查历史，不执行强制重置。确认同步后再运行部署脚本。
 
 ## Ubuntu 部署
 
@@ -214,7 +245,7 @@ docker compose logs --tail=100 migrate web
 2. 配置备案号后执行：
 
 ```bash
-docker compose up -d --build
+bash scripts/deploy.sh docker
 docker compose logs --tail=100 web migrate
 ```
 
@@ -243,6 +274,26 @@ npm run data:cleanup -- --apply
 有订单的咨询、成交信息和收退款记录不会被该脚本清理，数据库外键也阻止直接删除关联咨询。请根据业务保留要求安排执行周期并先备份；本版不自动安排定时删除。用户的个别删除申请需管理员核对后处理。
 
 ## 后续开发
+
+### 管理工作台
+
+登录后进入 `/admin/overview`，管理导航可切换到原有咨询、订单与套餐页面，并高亮当前位置。
+
+- 展示待沟通咨询、处理中订单、待复核订单、已上架套餐数量。待沟通只统计 `NEW`，处理中只统计 `IN_PROGRESS`；待复核包括所有交付状态中的复核标记。
+- 咨询队列按提交时间从早到晚展示前 5 条；复核队列按最后更新时间从早到晚展示前 5 条。每条可进入详情，“查看全部”保留对应筛选条件。
+- 同一次数据库读取中的计数与列表使用一致快照；页面显示北京时间，可手动刷新。不是实时推送。
+- 工作台沿用管理员会话验证，不公开客户信息，不统计或触发实际收付款。本轮无需数据库迁移。
+
+验收：未登录访问工作台应进入登录页；核对计数与筛选列表；测试零待办、超过 5 条待办、已完成但仍待复核订单；修改状态后点击“刷新概览”，确认数据更新。
+
+### 套餐浏览更新
+
+- 用户可按名称或说明搜索，按服务类型筛选，并按价格排序；筛选条件保存在网址中，翻页继续保留。
+- 套餐卡片展示简要说明，详情页展示完整内容。未上架、已下架和不存在的套餐不公开详情。
+- 详情页咨询入口会带入套餐名称与服务类型；“两项都想了解”也能正确带入。
+- 本轮没有新增数据库迁移。Podman 更新时执行 `bash scripts/deploy.sh podman`，确保数据库可用并使用新镜像重新创建网站。
+
+验收：检查关键词、分类与排序组合，翻页后条件保留；无匹配时可清除筛选；下架套餐后原详情链接不可查看；详情咨询入口正确预填名称与类型。
 
 下一阶段可加入订单变更及客户通知，再根据实际商户条件接入支付。AI 助手在线运行及模型调用计费属于后续单独范围。
 

@@ -5,7 +5,7 @@ import { LoginForm } from "@/components/admin-auth";
 export const metadata: Metadata = { title: "管理员登录" };
 export const dynamic = "force-dynamic";
 export default async function LoginPage() {
-  if (await currentAdmin()) redirect("/admin");
+  if (await currentAdmin()) redirect("/admin/overview");
   return (
     <div className="container page-shell">
       <div className="login-shell">

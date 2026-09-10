@@ -154,9 +154,11 @@ try {
   await migrationUpgradeCheck({ check, sql });
   await start();
   await check("未登录时后台重定向且不返回客户信息", async () => {
-    const response = await fetch(base + "/admin", { redirect: "manual" });
-    assert.equal(response.status, 307);
-    assert.equal(response.headers.get("location"), "/admin/login");
+    for (const path of ["/admin", "/admin/overview"]) {
+      const response = await fetch(base + path, { redirect: "manual" });
+      assert.equal(response.status, 307);
+      assert.equal(response.headers.get("location"), "/admin/login");
+    }
   });
   await check("跨站提交被拒绝", async () => {
     assert.equal(
@@ -325,6 +327,17 @@ try {
   let cookie;
   await check("管理员登录设置 HttpOnly 与 SameSite 会话", async () => {
     cookie = await login();
+  });
+  await check("工作台只向已登录管理员返回不可共享缓存的概览", async () => {
+    const response = await fetch(base + "/admin/overview", {
+      headers: { Cookie: cookie },
+      redirect: "manual",
+    });
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("cache-control"), /private|no-store/);
+    const html = await response.text();
+    assert.ok(html.includes("等待首次沟通"));
+    assert.ok(html.includes("需要复核的订单"));
   });
   await check("登录后可查看需求列表和详情", async () => {
     for (const path of ["/admin", `/admin/requests/${id}`]) {

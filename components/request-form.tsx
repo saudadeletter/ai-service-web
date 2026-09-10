@@ -133,7 +133,9 @@ export function RequestForm() {
               defaultValue={
                 params.get("service") === "subscription"
                   ? "ChatGPT 订阅协助"
-                  : serviceOptions[0]
+                  : params.get("service") === "both"
+                    ? "两项都想了解"
+                    : serviceOptions[0]
               }
             >
               {serviceOptions.map((s) => (

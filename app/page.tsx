@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowDown, ArrowUpRight, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SceneBoard } from "@/components/scene-board";
 import { ServiceIcon } from "@/components/icons";
 import { faqs, scenarios, services } from "@/lib/content";
 
@@ -10,6 +11,7 @@ export default function Home() {
       <div className="home-screen home-hero-screen">
         <section className="hero container">
           <div className="hero-copy">
+            <span className="campus-stamp">AI 小站 / CAMPUS EDITION</span>
             <div className="eyebrow">
               <Sparkles size={16} /> 为校园里的每一个「不会」准备
             </div>
@@ -45,46 +47,7 @@ export default function Home() {
               </span>
             </div>
           </div>
-          <div className="hero-board">
-            <div className="board-heading">
-              <span className="tiny-label">今天，给自己减点负</span>
-              <span className="board-index">01 / 04</span>
-            </div>
-            <div className="board-title">
-              <ServiceIcon name="book" size={32} />
-              <h2>
-                期末复习
-                <br />
-                有个新思路。
-              </h2>
-            </div>
-            <div className="message message-user">
-              课件有点多，不知道怎么复习……
-            </div>
-            <div className="message message-agent">
-              <span className="message-author">
-                <Sparkles size={16} /> 复习助手 · 能做什么
-              </span>
-              <p>先整理知识框架，再把复习拆成每天的小任务。</p>
-              <div className="mini-tasks">
-                <span>
-                  <Check size={15} /> 归纳知识点
-                </span>
-                <span>
-                  <Check size={15} /> 制定复习计划
-                </span>
-                <span>
-                  <Check size={15} /> 生成自测练习
-                </span>
-              </div>
-            </div>
-            <div className="board-bottom">
-              <span>使用场景示意</span>
-              <Link href="/custom?scene=期末复习">
-                定制我的复习助手 <ArrowUpRight size={16} />
-              </Link>
-            </div>
-          </div>
+          <SceneBoard />
         </section>
         <div className="intro-strip">
           <div className="container">
@@ -97,7 +60,7 @@ export default function Home() {
       <section id="services" className="section container home-screen">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">WHAT WE CAN HELP</p>
+            <p className="eyebrow">02 / WHAT WE CAN HELP</p>
             <h2>从这里，开始用好 AI。</h2>
           </div>
           <p>
@@ -106,7 +69,7 @@ export default function Home() {
             我们一起确认解决方式。
           </p>
         </div>
-        <div className="service-grid">
+        <div className="service-grid" data-reveal>
           {services.map((service, i) => (
             <article
               className={`service-card ${i === 1 ? "service-card-accent" : ""}`}
@@ -128,6 +91,14 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
+              <div className="delivery-preview">
+                <span>交付前，一起确认</span>
+                <p>
+                  {i === 0
+                    ? "订阅方案 · 办理时间 · 状态核验"
+                    : "助手配置 · 使用示例 · 调整范围"}
+                </p>
+              </div>
               <div className="service-card-bottom">
                 <span>
                   <strong>{service.price}</strong>
@@ -147,14 +118,14 @@ export default function Home() {
         <div className="section container">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">MADE FOR YOUR EVERYDAY</p>
+              <p className="eyebrow">03 / MADE FOR YOUR EVERYDAY</p>
               <h2>这些时刻，AI 可以搭把手。</h2>
             </div>
             <Link href="/custom" className="text-link">
               说说我的场景 <ArrowUpRight size={18} />
             </Link>
           </div>
-          <div className="scenario-grid">
+          <div className="scenario-grid" data-reveal>
             {scenarios.map((s, i) => (
               <Link
                 href={`/custom?scene=${encodeURIComponent(s.title)}`}
@@ -179,31 +150,56 @@ export default function Home() {
           </p>
         </div>
       </section>
-      <section className="section container home-screen">
+      <section className="section container home-screen process-section">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">HOW IT WORKS</p>
+            <p className="eyebrow">04 / HOW IT WORKS</p>
             <h2>流程简单，事情说清楚。</h2>
           </div>
         </div>
-        <div className="steps">
+        <div className="steps" data-reveal>
           {[
-            ["选择服务", "找到适合的方向，说明想解决的问题。"],
-            ["确认方案", "沟通范围、费用、交付时间与售后约定。"],
-            ["开始处理", "确认订单后，按约定的方案办理或定制。"],
-            ["交付与上手", "核验结果，拿到操作说明和使用示例。"],
-          ].map(([title, text], i) => (
+            ["选择服务", "找到适合的方向，说明想解决的问题。", "一份需求清单"],
+            [
+              "确认方案",
+              "沟通范围、费用、交付时间与售后约定。",
+              "清楚的报价与约定",
+            ],
+            [
+              "开始处理",
+              "确认订单后，按约定的方案办理或定制。",
+              "可以查询的进度",
+            ],
+            [
+              "交付与上手",
+              "核验结果，拿到操作说明和使用示例。",
+              "约定的成果与说明",
+            ],
+          ].map(([title, text, outcome], i) => (
             <article key={title}>
               <span className="step-number">0{i + 1}</span>
               <h3>{title}</h3>
               <p>{text}</p>
+              <span className="step-outcome">
+                <Check size={14} />
+                {outcome}
+              </span>
             </article>
           ))}
+        </div>
+        <div className="process-note">
+          <Sparkles size={19} />
+          <p>
+            第一次尝试也没关系。<span> 把问题说出来，我们从这一步开始。</span>
+          </p>
+          <Link href="/custom" className="text-link">
+            聊聊我的需求 <ArrowUpRight size={16} />
+          </Link>
         </div>
       </section>
       <section className="section container faq-section home-screen">
         <div>
-          <p className="eyebrow">BEFORE YOU START</p>
+          <p className="eyebrow">05 / BEFORE YOU START</p>
           <h2>你可能还想问。</h2>
           <p className="muted">
             价格、交付、使用方式，
@@ -214,7 +210,7 @@ export default function Home() {
             查看服务说明 <ArrowUpRight size={17} />
           </Link>
         </div>
-        <div className="faq-list">
+        <div className="faq-list" data-reveal>
           {faqs.map(([q, a]) => (
             <details key={q}>
               <summary>

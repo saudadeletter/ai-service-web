@@ -8,3 +8,5 @@ out/
 generated/
 .env.tmp
 .DS_Store
+.deploy.lock
+*.dump

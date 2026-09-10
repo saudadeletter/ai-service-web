@@ -6,3 +6,7 @@ node_modules
 *.tsbuildinfo
 
 generated
+*.patch
+*.bundle
+*.dump
+.deploy.lock

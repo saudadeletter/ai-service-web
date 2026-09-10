@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { PageMotion } from "@/components/page-motion";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,9 @@ export default function RootLayout({
           跳转到正文
         </a>
         <Header />
-        <main id="main">{children}</main>
+        <main id="main">
+          <PageMotion>{children}</PageMotion>
+        </main>
         <Footer />
       </body>
     </html>
