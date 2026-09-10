@@ -10,3 +10,5 @@ generated/
 .DS_Store
 .deploy.lock
 *.dump
+.admin-credentials
+.bootstrap.*/

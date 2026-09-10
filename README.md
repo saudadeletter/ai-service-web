@@ -6,6 +6,53 @@
 
 所有已发布功能已合并到 `main`。后续开发、提交、拉取和部署统一使用 `main`，原 `feat/service-pages` 保留为历史分支。开始开发前先 `git switch main`，再 `git pull --ff-only`；完成验证后提交并 `git push origin main`。主分支推送会触发 GitHub Actions 构建和集成检查。
 
+## 容器开发环境：快速开始
+
+Linux 宿主机只需 Git、Bash、curl、flock、timeout，以及 **Podman + podman-compose** 或 **Docker + Compose 插件**。无需在宿主机安装 Node.js、npm、PostgreSQL，也不需要先复制 `.env.example` 或执行 `npm install`。
+
+首次重新搭建环境：
+
+```bash
+git clone -b main https://github.com/saudadeletter/ai-service-web.git
+cd ai-service-web
+bash deploy.sh
+```
+
+默认自动识别容器引擎；如果两种引擎都安装了，显式运行 `bash deploy.sh podman` 或 `bash deploy.sh docker`。请继续使用原来的用户、引擎和项目目录，以便找到原数据库卷。
+
+首次缺少 `.env` 时，脚本会在临时 Node 容器里生成随机数据库密码、管理员密码哈希和会话限流密钥。`.env` 和 `.admin-credentials` 权限为 600，并从 Git 和镜像构建上下文排除；配置生成不挂载宿主机目录，兼容 Rocky Linux 的 SELinux 与 rootless Podman。管理员用户名默认 `admin`，部署后在自己的终端查看初始密码：
+
+```bash
+cat .admin-credentials
+```
+
+将密码保存到密码管理器后可删除这个凭据文件，保留 `.env`。再次部署不会改写已有配置、重新生成密码或清空数据库。若检测到当前项目的旧数据库卷而 `.env` 缺失，会停止并提示恢复原 `.env`。已有但未填完整的 `.env` 不自动补写随机密码，需要补齐或恢复原配置。
+
+网站地址为 `http://localhost:3000`，后台入口为 `/admin/login`。如果运行在 Rocky 虚拟机而浏览器在 Windows，请在 Windows 终端保持 SSH 隧道连接（IP 按实际虚拟机地址替换）：
+
+```bash
+ssh -N -L 3000:127.0.0.1:3000 anonymity@192.168.41.131
+```
+
+之后在 Windows 浏览器访问 `http://localhost:3000`。当前容器使用构建后的应用，修改代码后需要再次部署，不是热更新模式。
+
+日常更新（工作区干净时）：
+
+```bash
+git -c http.version=HTTP/1.1 pull --ff-only
+bash deploy.sh
+```
+
+拉取失败时先处理 Git 错误，再部署。其他常用操作：
+
+```bash
+bash deploy.sh status
+bash deploy.sh logs
+bash deploy.sh stop
+```
+
+`stop` 停止网站和数据库，保留配置与数据卷；再次 `bash deploy.sh` 即可重新构建并启动。如果两种引擎并存，上述命令都加上实际使用的引擎，例如 `bash deploy.sh podman logs`。本流程用于本地测试；正式域名上线前，在 `.env` 设置实际 HTTPS `APP_URL`，配置 Nginx 与证书后再部署，详见下方 Ubuntu 部署。
+
 ## 当前阶段：流水冲正、账目复核与完整历史（v0.4）
 
 用户可浏览已上架套餐并提交咨询。管理员确认成交价和交付约定后，将咨询转为订单，登记已核对的实际收退款并记录交付。用户继续通过原来的“需求编号 + 查询码”查看咨询和关联订单。
@@ -204,17 +251,17 @@ npm run test:integration
 
 ## Linux Docker / Podman 部署与升级
 
-先备份数据库，并保留原项目目录和 `.env`。脚本要求 Bash、curl、flock、timeout 和已配置的 Compose provider；Rocky Linux 使用原来创建容器的普通用户运行，避免切换到 sudo 后访问另一套容器与卷。
+升级已有环境时先备份数据库，并保留原项目目录和 `.env`；全新环境直接运行脚本生成配置。脚本要求 Bash、curl、flock、timeout 和已配置的 Compose provider；Rocky Linux 使用原来创建容器的普通用户运行，避免切换到 sudo 后访问另一套容器与卷。
 
 ```bash
 # Rocky Linux / Podman
-bash scripts/deploy.sh podman
+bash deploy.sh podman
 
 # Ubuntu / Docker
-bash scripts/deploy.sh docker
+bash deploy.sh docker
 ```
 
-脚本先构建 web 和 migrate 镜像，再启动数据库并等待就绪；成功后停止旧网站，执行一次性迁移，强制重新创建 web，检查 `/packages` 返回 HTTP 200。构建或数据库等待失败时不会进入停止网站步骤；迁移失败时保持网站停止，检查终端错误后修复并重新执行。迁移完成前不会启动新版网站，不删除数据卷、不改写 `.env`，也不会自动回退数据库。最后的页面检查失败表示部署尚未通过验收，网站容器可能仍在运行，可用下方日志命令排查。
+脚本先构建 web 和 migrate 镜像，再启动数据库并等待就绪；成功后停止旧网站，执行一次性迁移，强制重新创建 web，检查 `/packages` 返回 HTTP 200。构建或数据库等待失败时不会进入停止网站步骤；迁移失败时保持网站停止，检查终端错误后修复并重新执行。迁移完成前不会启动新版网站，不删除数据卷、不改写已有 `.env`，也不会自动回退数据库。最后的页面检查失败表示部署尚未通过验收，网站容器可能仍在运行，可用下方日志命令排查。
 
 同一项目目录的部署通过文件锁串行执行。数据库与页面检查各最多尝试 30 次，每次有超时。Dockerfile 的公共基础阶段安装 OpenSSL 和 CA 证书；Compose 日志仅使用双方支持的 `max-size`，移除了 Podman 不支持的 `max-file`。
 
@@ -247,11 +294,11 @@ git stash list
 
 提供 `Dockerfile`、`compose.yaml` 和 `deploy/nginx.conf.example`。Compose 包含 PostgreSQL、一次性迁移服务和网站服务，先等待数据库健康，再迁移，再启动网站。
 
-1. 准备 `.env`，设置真实 HTTPS `APP_URL`、管理员信息与数据库密码。可以在本地运行 setup 生成，再通过自己的安全渠道放到服务器，勿提交到 Git。
+1. 可以先在本地通过 `bash deploy.sh` 生成 `.env`，再通过自己的安全渠道放到服务器。已有服务器保留原配置；设置真实 HTTPS `APP_URL`、管理员信息与数据库密码，勿提交到 Git。
 2. 配置备案号后执行：
 
 ```bash
-bash scripts/deploy.sh docker
+bash deploy.sh docker
 docker compose logs --tail=100 web migrate
 ```
 
@@ -297,7 +344,7 @@ npm run data:cleanup -- --apply
 - 用户可按名称或说明搜索，按服务类型筛选，并按价格排序；筛选条件保存在网址中，翻页继续保留。
 - 套餐卡片展示简要说明，详情页展示完整内容。未上架、已下架和不存在的套餐不公开详情。
 - 详情页咨询入口会带入套餐名称与服务类型；“两项都想了解”也能正确带入。
-- 本轮没有新增数据库迁移。Podman 更新时执行 `bash scripts/deploy.sh podman`，确保数据库可用并使用新镜像重新创建网站。
+- 本轮没有新增数据库迁移。Podman 更新时执行 `bash deploy.sh podman`，确保数据库可用并使用新镜像重新创建网站。
 
 验收：检查关键词、分类与排序组合，翻页后条件保留；无匹配时可清除筛选；下架套餐后原详情链接不可查看；详情咨询入口正确预填名称与类型。
 

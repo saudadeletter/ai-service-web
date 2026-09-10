@@ -10,3 +10,5 @@ generated
 *.bundle
 *.dump
 .deploy.lock
+.admin-credentials
+.bootstrap.*

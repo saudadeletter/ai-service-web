@@ -34,6 +34,29 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: node --test tests/deploy.test.mjs
+      - run: node --test tests/deploy.test.mjs tests/container-env.test.mjs
       - run: npm run build
       - run: npm run test:integration
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fresh container deployment without host Node setup
+        run: bash deploy.sh docker
+      - name: Save configuration fingerprints and a persistence marker
+        run: |
+          sha256sum .env .admin-credentials > "$RUNNER_TEMP/ai-service-config.sha256"
+          docker compose -f compose.yaml exec -T db psql -U ai_service -d ai_service -v ON_ERROR_STOP=1 -c "CREATE TABLE deployment_probe (id integer PRIMARY KEY); INSERT INTO deployment_probe VALUES (1);"
+      - name: Stop and redeploy with existing configuration and database
+        run: |
+          bash deploy.sh docker stop
+          bash deploy.sh docker
+          sha256sum --check "$RUNNER_TEMP/ai-service-config.sha256"
+          test "$(docker compose -f compose.yaml exec -T db psql -U ai_service -d ai_service -Atc 'SELECT count(*) FROM deployment_probe')" = 1
+      - name: Container status
+        if: always()
+        run: docker compose -f compose.yaml ps -a
+      - name: Stop test containers
+        if: always()
+        run: docker compose -f compose.yaml down
