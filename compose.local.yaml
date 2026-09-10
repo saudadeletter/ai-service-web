@@ -1,0 +1,5 @@
+# Use only for Node.js development on your own computer.
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"

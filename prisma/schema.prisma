@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RequestStatus {
+  NEW
+  CONTACTED
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+}
+
+model ServiceRequest {
+  id           String        @id @default(cuid())
+  number       String        @unique
+  lookupHash   String        @unique
+  payloadHash  String
+  service      String
+  scene        String
+  description  String
+  timeline     String
+  budget       String
+  contactType  String
+  contact      String
+  status       RequestStatus @default(NEW)
+  publicNote   String        @default("")
+  internalNote String        @default("")
+  revision     Int           @default(0)
+  consentAt    DateTime      @default(now())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  events       RequestEvent[]
+  order        ServiceOrder?
+
+  @@index([status, createdAt])
+  @@index([updatedAt])
+}
+
+model RequestEvent {
+  id        String         @id @default(cuid())
+  requestId String
+  request   ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  status    RequestStatus
+  actor     String
+  createdAt DateTime       @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+model AdminSession {
+  tokenHash         String   @id
+  credentialVersion String
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model RateBucket {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+
+enum OrderStatus {
+  CONFIRMED
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum MoneyEntryKind {
+  PAYMENT
+  REFUND
+}
+
+model ServicePackage {
+  id           String @id @default(uuid())
+  creationHash String
+  name         String
+  service      String
+  description  String
+  priceCents   Int
+  isActive     Boolean @default(false)
+  revision     Int @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orders       ServiceOrder[]
+
+  @@index([isActive, createdAt])
+}
+
+model ServiceOrder {
+  id             String @id @default(cuid())
+  number         String @unique
+  requestId      String @unique
+  request        ServiceRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  packageId      String
+  package        ServicePackage @relation(fields: [packageId], references: [id], onDelete: Restrict)
+  conversionHash String
+  title          String
+  service        String
+  amountCents    Int
+  paidCents      Int @default(0)
+  refundedCents  Int @default(0)
+  deliveryTerms  String
+  deliveryNote   String @default("")
+  publicNote     String @default("")
+  status         OrderStatus @default(CONFIRMED)
+  revision       Int @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  events         OrderEvent[]
+  moneyEntries   MoneyEntry[]
+  ledgerReviews  LedgerReview[]
+  needsReview    Boolean @default(false)
+
+  @@index([status, createdAt])
+}
+
+model OrderEvent {
+  id           String @id @default(cuid())
+  orderId      String
+  order        ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status       OrderStatus
+  publicNote   String
+  deliveryNote String
+  actor        String
+  createdAt    DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model MoneyEntry {
+  id             String @id @default(cuid())
+  orderId        String
+  order          ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  idempotencyKey String @unique
+  payloadHash    String
+  kind           MoneyEntryKind
+  amountCents    Int
+  reference      String
+  note           String
+  actor          String
+  createdAt      DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  correction     MoneyCorrection?
+
+  @@index([orderId, kind, reference])
+}
+
+
+model MoneyCorrection {
+  id             String @id @default(cuid())
+  entryId        String @unique
+  entry          MoneyEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  idempotencyKey String @unique
+  payloadHash    String
+  reason         String
+  actor          String
+  createdAt      DateTime @default(now())
+}
+
+model LedgerReview {
+  id             String @id @default(cuid())
+  orderId        String
+  order          ServiceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  idempotencyKey String @unique
+  payloadHash    String
+  reason         String
+  actor          String
+  previousStatus OrderStatus
+  status         OrderStatus
+  paidCents      Int
+  refundedCents  Int
+  createdAt      DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}

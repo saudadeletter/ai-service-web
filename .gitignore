@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.env*
+!.env.example
+*.tsbuildinfo
+*.log
+generated/
+.env.tmp
+.DS_Store
+.deploy.lock
+*.dump
