@@ -12,3 +12,4 @@ generated/
 *.dump
 .admin-credentials
 .bootstrap.*/
+backups/

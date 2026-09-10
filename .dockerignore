@@ -12,3 +12,4 @@ generated
 .deploy.lock
 .admin-credentials
 .bootstrap.*
+backups

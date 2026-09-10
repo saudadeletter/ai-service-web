@@ -34,7 +34,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: node --test tests/deploy.test.mjs tests/container-env.test.mjs
+      - run: node --test tests/deploy.test.mjs tests/container-env.test.mjs tests/database.test.mjs
       - run: npm run build
       - run: npm run test:integration
   containers:
@@ -54,9 +54,24 @@ jobs:
           bash deploy.sh docker
           sha256sum --check "$RUNNER_TEMP/ai-service-config.sha256"
           test "$(docker compose -f compose.yaml exec -T db psql -U ai_service -d ai_service -Atc 'SELECT count(*) FROM deployment_probe')" = 1
+      - name: Back up and restore into an isolated empty database
+        run: |
+          bash deploy.sh docker backup
+          for backup_dir in backups/backup-*; do break; done
+          if bash deploy.sh docker restore "$backup_dir"; then
+            echo 'Restore should refuse the original nonempty database.'
+            exit 1
+          fi
+          bash deploy.sh docker stop
+          COMPOSE_PROJECT_NAME=ai_service_restore bash deploy.sh docker restore "$backup_dir"
+          test "$(COMPOSE_PROJECT_NAME=ai_service_restore docker compose -f compose.yaml exec -T db psql -U ai_service -d ai_service -Atc 'SELECT count(*) FROM deployment_probe')" = 1
+          COMPOSE_PROJECT_NAME=ai_service_restore bash deploy.sh docker
+          sha256sum --check "$RUNNER_TEMP/ai-service-config.sha256"
       - name: Container status
         if: always()
         run: docker compose -f compose.yaml ps -a
       - name: Stop test containers
         if: always()
-        run: docker compose -f compose.yaml down
+        run: |
+          docker compose -f compose.yaml down
+          COMPOSE_PROJECT_NAME=ai_service_restore docker compose -f compose.yaml down

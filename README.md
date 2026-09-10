@@ -49,6 +49,7 @@ bash deploy.sh
 bash deploy.sh status
 bash deploy.sh logs
 bash deploy.sh stop
+bash deploy.sh backup
 ```
 
 `stop` 停止网站和数据库，保留配置与数据卷；再次 `bash deploy.sh` 即可重新构建并启动。如果两种引擎并存，上述命令都加上实际使用的引擎，例如 `bash deploy.sh podman logs`。本流程用于本地测试；正式域名上线前，在 `.env` 设置实际 HTTPS `APP_URL`，配置 Nginx 与证书后再部署，详见下方 Ubuntu 部署。
@@ -311,11 +312,36 @@ Docker 与 Nginx 配置需在你的 Ubuntu 服务器上实际验证；此开发�
 
 ## 备份与数据清理
 
-在运行 Compose 的目录，可用 Docker 中的 `pg_dump` 备份。将文件保存到服务器之外，并在独立数据库验证恢复。Windows 使用 CMD 执行重定向，避免旧版 PowerShell 对二进制输出进行转码。
+重装虚拟机前，在原项目目录运行（Docker 用户将 `podman` 换成 `docker`）：
 
 ```bash
-docker compose exec -T db pg_dump -U ai_service -d ai_service -Fc > ai-service-backup.dump
+bash deploy.sh podman backup
 ```
+
+成功后终端显示 `backups/backup-时间-随机后缀` 目录，其中包含 PostgreSQL 自定义格式备份 `database.dump`、原 `.env`、两者的 SHA-256 校验文件和备份时间；若原项目仍有初始管理员凭据文件，也会一并保存。备份过程不停止网站，数据库使用一致快照。只有导出及归档目录检查成功后才发布完成目录；失败时删除本次临时文件，不影响以前的备份。
+
+**将整个备份目录安全复制到虚拟机之外，再重装。** 目录包含客户数据和密钥，权限为 700，数据和配置文件权限为 600，不上传 Git，也不会进入镜像。文件没有额外加密，请存放在自己的安全存储中。备份发生后的新记录不包含在其中。
+
+### 在重装后的空环境恢复
+
+克隆主分支并把备份目录复制回来后，**先恢复，再执行首次部署**。以下 `backup-...` 替换为实际目录名；只使用自己保存的可信备份：
+
+```bash
+# 在项目根目录；-n 保留可能已经存在的 .env
+cp -n backups/backup-.../.env .env
+chmod 600 .env
+bash deploy.sh podman restore backups/backup-...
+# 只有恢复成功后，才执行部署
+bash deploy.sh podman
+```
+
+恢复会检查数据库备份和 `.env` 的 SHA-256、归档格式，以及目标 `ai_service` 数据库是否为空。然后停止该项目的网站，以单个事务恢复；失败则回滚本次数据库修改并保持网站停止。恢复命令不清空数据库、不覆盖项目已有 `.env`，也不自动启动网站。之后运行部署脚本应用尚未执行的迁移并启动页面。
+
+管理员信息沿用项目 `.env`：复制原 `.env` 即保留原管理员密码；初始凭据文件若仍适用，可从备份中查看。原管理员密码如已重置，以后来保存的密码为准。
+
+如果已经执行过首次部署，数据库内已有迁移表和业务表，恢复会拒绝执行。请在另一个全新的环境或新的 Compose 项目中恢复，不要删除有用的数据卷来绕过检查。SHA-256 用于检查文件是否损坏，成功备份仍应在独立环境演练恢复；GitHub Actions 会验证真实数据库的备份、空库恢复、非空库拒绝及恢复后页面访问。
+
+### 数据清理
 
 清理脚本默认只显示数量。它只针对“已完成 / 已关闭且 90 天未更新、没有关联订单”的需求，实际执行时一并删除关联处理记录及过期会话、限流记录。
 

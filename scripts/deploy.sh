@@ -5,16 +5,26 @@ set -Eeuo pipefail
 fail() { printf '%s\n' "$*" >&2; exit 1; }
 engine=''
 action=deploy
+action_set=false
+restore_path=''
 for argument in "$@"; do
   case "$argument" in
     podman|docker) [[ -z "$engine" ]] || fail '只能指定一个容器引擎。'; engine=$argument ;;
-    deploy|status|logs|stop) action=$argument ;;
+    deploy|status|logs|stop|backup|restore)
+      [[ "$action_set" == false ]] || fail '只能指定一个操作。'
+      action=$argument; action_set=true ;;
     -h|--help)
-      printf '用法：bash deploy.sh [podman|docker] [deploy|status|logs|stop]\n默认：自动识别引擎并部署；首次自动生成 .env，更新保留已有配置与数据。\n'
+      printf '用法：bash deploy.sh [podman|docker] [deploy|status|logs|stop|backup]\n恢复：bash deploy.sh [podman|docker] restore 备份目录（仅限空数据库）\n默认：自动识别引擎并部署；首次自动生成 .env，更新保留已有配置与数据。\n'
       exit 0 ;;
-    *) fail "未知参数：$argument。使用 bash deploy.sh --help 查看用法。" ;;
+    *)
+      if [[ "$action" == restore && -z "$restore_path" && "$argument" != -* ]]; then
+        restore_path=$argument
+        [[ "$restore_path" == /* ]] || restore_path="$PWD/$restore_path"
+      else fail "未知参数：$argument。使用 bash deploy.sh --help 查看用法。"
+      fi ;;
   esac
 done
+[[ "$action" != restore || -n "$restore_path" ]] || fail '请指定备份目录：bash deploy.sh restore backups/backup-...'
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.."
 if [[ -z "$engine" ]]; then
   if command -v podman >/dev/null && command -v docker >/dev/null; then
@@ -52,6 +62,10 @@ fi
 # Lock this checkout, without including configuration in command output.
 exec 9>.deploy.lock
 flock -n 9 || fail '本项目已有部署正在运行，请等待其完成。'
+if [[ "$action" == backup || "$action" == restore ]]; then
+  source scripts/database.sh
+  exit 0
+fi
 if [[ "$action" == stop ]]; then
   [[ -f .env ]] || fail '项目尚未初始化，无需停止。'
   stop_service web
