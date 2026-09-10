@@ -2,6 +2,10 @@
 
 面向校园用户的 AI 服务网站。Next.js App Router + TypeScript + Tailwind CSS + PostgreSQL + Prisma ORM。
 
+## 开发分支约定
+
+所有已发布功能已合并到 `main`。后续开发、提交、拉取和部署统一使用 `main`，原 `feat/service-pages` 保留为历史分支。开始开发前先 `git switch main`，再 `git pull --ff-only`；完成验证后提交并 `git push origin main`。主分支推送会触发 GitHub Actions 构建和集成检查。
+
 ## 当前阶段：流水冲正、账目复核与完整历史（v0.4）
 
 用户可浏览已上架套餐并提交咨询。管理员确认成交价和交付约定后，将咨询转为订单，登记已核对的实际收退款并记录交付。用户继续通过原来的“需求编号 + 查询码”查看咨询和关联订单。
@@ -36,7 +40,7 @@
 停止正在运行的本地网站后，执行以下命令。保留现有 `.env` 和数据库卷，无需重新初始化管理员密码：
 
 ```bat
-git switch feat/service-pages
+git switch main
 git -c http.version=HTTP/1.1 pull --ff-only
 npm ci
 docker compose -f compose.yaml -f compose.local.yaml up -d --wait db
@@ -53,7 +57,7 @@ npm run dev
 在现有仓库目录更新。若你改过本地文件，请先提交或妥善保存，避免拉取发生冲突：
 
 ```bat
-git switch feat/service-pages
+git switch main
 git -c http.version=HTTP/1.1 pull --ff-only
 npm ci
 npm run setup
@@ -230,7 +234,9 @@ podman compose -f compose.yaml logs --tail=100 db web
 先运行 `git status --short`。如果存在之前通过 `git apply` 加入的页面、组件和样式改动，先保存，再拉取，避免覆盖或冲突：
 
 ```bash
-git stash push -u -m "before-sync-service-pages"
+git stash push -u -m "before-switch-main"
+git -c http.version=HTTP/1.1 fetch origin
+git switch main
 git -c http.version=HTTP/1.1 pull --ff-only
 git stash list
 ```
